@@ -1,4 +1,4 @@
-from utilis import cstr
+from utilies import cstr
 
 class Ped(object):
     def __init__(self, id:int, location:tuple|list):
