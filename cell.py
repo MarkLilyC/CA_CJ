@@ -4,6 +4,7 @@ from utilies import cstr
 
 # 基本元胞类
 class Cell(object):
+
     def __init__(self, x:int, y:int, sff:float = None, dff:float = None, ped:Ped = None) -> None:
         self.__x = x
         self.__y = y
@@ -14,9 +15,13 @@ class Cell(object):
     
     # 暂时不提供x y 的set方法 即元胞一旦被创建则无法修改其位置
     def get_x(self): return self.__x
+
     def get_y(self): return self.__y
+
     def get_loc(self): return (self.__x, self.__y)
-    
+
+    def get_classname(self):return self.__classname
+
     def __eq__(self, target: object) -> bool:
         return self.loc() == target.loc()
     
@@ -33,8 +38,10 @@ class Wall(Cell):
         self.__dff = dff
         self.__classname = "Wall"
     
+    def get_classname(self):return self.__classname
+    
     def __str__(self) -> str:
-        return f"Cell:{(self.__x, self.__y)}, sff={self.__sff}, dff:{self.__dff}"
+        return f"Wall:{(self.__x, self.__y)}, sff={self.__sff}, dff:{self.__dff}"
 
 class Exit(Cell):
     def __init__(self, x:int, y:int, sff:float = None, dff:float = None, ped:Ped = None) -> None:
@@ -45,6 +52,8 @@ class Exit(Cell):
         self.__dff = dff
         self.__classname = "Exit"
         self.__ped = ped
+
+    def get_classname(self):return self.__classname
     
     def get_ped(self): return self.__ped
     
@@ -84,7 +93,7 @@ class Exit(Cell):
         self.__ped = None
         
     def __str__(self) -> str:
-        return f"Cell:{(self.__x, self.__y)}, sff={self.__sff}, dff:{self.__dff}, ped:{self.__ped.__str__()}"
+        return f"Exit:{(self.__x, self.__y)}, sff={self.__sff}, dff:{self.__dff}, ped:{self.__ped.__str__()}"
         
         
 
@@ -97,6 +106,8 @@ class Free(Cell):
         self.__dff = dff
         self.__classname = "Free"
         self.__ped = ped
+    
+    def get_classname(self):return self.__classname
     
     # ped方法
     def get_ped(self):return self.__ped
@@ -143,5 +154,5 @@ class Free(Cell):
         self.__ped = None
         
     def __str__(self) -> str:
-        return f"Cell:{(self.__x, self.__y)}, sff={self.__sff}, dff:{self.__dff}, ped:{self.__ped.__str__()}"
+        return f"Free:{(self.__x, self.__y)}, sff={self.__sff}, dff:{self.__dff}, ped:{self.__ped.__str__()}"
     

@@ -39,7 +39,8 @@ class Floor(object):
 
     def set_exit_cells(self, exit_cells = None):
         if exit_cells is None:
-            exit_cells = frozenset(((self.__dim_x // 2, self.__dim_y - 1), (self.__dim_x // 2 + 1, self.__dim_y - 1),
+            exit_cells = frozenset((
+                            (self.__dim_x // 2, self.__dim_y - 1), (self.__dim_x // 2 + 1, self.__dim_y - 1),
                             (self.__dim_x - 1, self.__dim_y//2 + 1) , (self.__dim_x - 1, self.__dim_y//2),
                             (0, self.__dim_y//2 + 1) , (1, self.__dim_y//2),
                             (self.__dim_x//2 + 1, 0) , (self.__dim_x//2, 0)
