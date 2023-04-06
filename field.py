@@ -2,7 +2,8 @@ from ped import Ped
 from cell import *
 import utilies
 import numpy as np
-from copy import copy
+import copy
+import random
 
 class Field(object):
     @staticmethod
@@ -86,8 +87,6 @@ class Field(object):
                 (self.x_start, self.y_end // 2),
                 (self.x_end - 1, self.y_end // 2)
             )
-        else:
-            pass
         for i in exit_cells:
             self.set(loc=i, cell=Exit)
         
@@ -113,7 +112,7 @@ class Field(object):
         _, res = self.count()
         return res['Free'] + res["Exit"]
 
-    def get_freecells(self):
+    def get_walkable_cells(self) -> list[Free]:
         free_cells = []
         for row in self.cells.values():
             for cell in row:
@@ -121,13 +120,18 @@ class Field(object):
                 else:pass
         return free_cells
 
-
     def init_peds(self, n_peds:int = 10):
         # 首先检查传入的人数是否能被容纳
         PED_CAPACITY = self.ped_capacity()
         assert n_peds <= PED_CAPACITY, f"Too many Peds ({n_peds}) to be initized in the field(capacity:{PED_CAPACITY})"
         # 获取场内的free cells
-        walkable_cells = self.get_freecells()
+        walkable_cells = self.get_walkable_cells()
+        random.shuffle(walkable_cells)
+        ped_index = 0
+        for cell in walkable_cells:
+            cell.init_ped(ped_id=ped_index)
+            ped_index += 1
+        
 
 
     
@@ -142,4 +146,4 @@ f.init_walls()
 f.show_obst()
 f.init_exit()
 f.show_obst()
-f.init_peds(200)
+f.init_peds(20)

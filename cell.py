@@ -113,11 +113,10 @@ class Free(Cell):
     def get_ped(self):return self.__ped
     
     # 初始化一个ped
-    def init_ped(self, ped:Ped):
-        # 初始化传入的ped必须是非none
-        assert ped is not None, cstr(f"{self.__str__()}, you cannot initizied a None ped into it")
-        # 如果传入的ped非none 则直接将该值赋给本元胞
-        self.__ped = ped
+    def init_ped(self, ped_id:int = None):
+        # 为元胞初始化一个ped的前提是本元胞不能含有非none的ped
+        assert self.__ped is None, f"{self.__str__()} has already been initized with {self.__ped}"
+        self.__ped = Ped(id=ped_id, location=self.get_loc())
     
     # 插入一个ped
     def insert_ped(self, ped = None):
