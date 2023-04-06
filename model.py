@@ -77,6 +77,11 @@ if __name__ == "__main__":
     building = Building(1)
 
     f1 = Floor(id=1, width=4.0, height=4.0, cellsize=0.4, z=0.0)
+    f1.set_exit_cells()
+    f1.init_wall()
+    f1.init_sff()
+    f1.init_peds(10)
+    
     
 
 

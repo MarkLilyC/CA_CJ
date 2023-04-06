@@ -25,6 +25,10 @@ class Building(object):
         else:
             self.__floors[new_floor.get_id] = new_floor
             return True
+    
+    def sim(self):
+        for i in self.__floors.values():
+            pass
         
     def __str__(self):
         res = f'Building {self.get_id}, contains Floor: \n'

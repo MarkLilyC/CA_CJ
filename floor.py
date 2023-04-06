@@ -2,7 +2,7 @@ import utilies
 from utilies import cstr
 import numpy as np
 import random
-
+import itertools as it
 class Floor(object):
 
     def __init__(self, id, width, height, cellsize, z = 0.):
@@ -14,6 +14,8 @@ class Floor(object):
         self.__y_range = [1, self.__dim_y - 2]  # 元胞可移动的y轴范围
         self.__exci_cells = None    # 当前楼层的疏散出口
         self.__sff = None   #   当前楼层的静态场
+        self.dff = None 
+        self.ped = None
         self.__obst = np.ones((self.__dim_x, self.__dim_y), int)    # 初始化一个场 
 
         print(f"Floor initialized: ID: {self.__id}, dim_x: {self.__dim_x}, dim_y: {self.__dim_y}")
@@ -44,12 +46,14 @@ class Floor(object):
          ))
         # 当前楼层的疏散出口位置一定是位于obst的边界上
         # 即cell的x 或 y坐标当中有一个必须是落在obst的边界上的
+        '''
         for cell in exit_cells:
             x, y = cell
             flag1 = x == 0 or x == self.__dim_x - 1
             flag2 = y == 0 or y == self.__dim_y - 1
             if flag1 or flag2:pass
             else: print(cstr(f"the exit_cell must locate at the edge of obst, obst's x_range:0 and {self.__dim_x - 1}, obst's y_range:0 and {self.__dim_y - 1}, while given cell:{cell}",0))
+        '''
         self.__exci_cells = exit_cells
         print(cstr(f"Floor {self.__id} set exit_cells finished", 1))
 
@@ -71,11 +75,11 @@ class Floor(object):
         # 左侧元胞  当前元胞如果位于obst的左侧边界 或者当前元胞的左侧元胞是墙体 则不为当前元胞添加左侧邻居
         if x >= 1 and obst[(x - 1, y)] >= 0:neighbors.append((x - 1, y))
         # 右侧元胞  当前元胞如果位于obst的右侧边界 或者当前元胞的右侧元胞是墙体 则不添加右侧元胞
-        if x <= self.__dim_x - 1 and self.__dim_x[(x + 1, y)] >= 0:neighbors.append((x + 1, y))
+        if x < self.__dim_x - 1 and obst[(x + 1, y)] >= 0:neighbors.append((x + 1, y))
         # 下侧元胞  当前元胞如果位于obst的下侧边界 或者当前元胞的下侧元胞是墙体 则不添加下侧元胞
         if y >= 1 and obst[(x, y - 1)] >= 0:neighbors.append((x, y - 1))
         # 上侧元胞  当前元胞如果位于obst的上侧边界 或者当前元胞的上侧元胞是墙体 则不添加上册元胞
-        if y <= self.__dim_y - 1 and self.__dim_y([x, y + 1]) >= 0:neighbors.append((x, y + 1))
+        if y < self.__dim_y - 1 and obst[(x, y + 1)] >= 0:neighbors.append((x, y + 1))
         random.shuffle(neighbors)
         return neighbors
 
@@ -144,7 +148,83 @@ class Floor(object):
         from_y, to_y = self.__y_range
         n_x = to_x - from_x + 1
         n_y = to_y - from_y + 1
+        ped_capacity = self.get_ped_capacity()
+        n_peds = self.check_ped(n_peds)
         peds = np.ones(n_peds, int) #   生成一个n长的以为向量
+        empty_cell_obst = np.zeros(ped_capacity - n_peds, int) # 剩余的可行进元胞个数
+        peds = np.hstack((peds, empty_cell_obst))   # 将ped和剩余元胞拼接起来
+        np.random.shuffle(peds)  # 打乱顺序
+        peds = peds.reshape((n_x, n_y)) # 重新调整为obst的形状（除去墙体）
+        total_cells = np.zeros((self.__dim_x, self.__dim_y), int)   # 新建一个obst形状的矩阵
+        total_cells[from_x:to_x + 1, from_y:to_y + 1] = peds    # 将ped和空元胞放到对应位置
+        self.ped = total_cells
+        print(cstr(f"Init {n_peds} finished"))
+    
+    def init_dff(self):
+        self.dff = np.zeros((self.__dim_x, self.__dim_y))
+        
+    def update_dff(self, dff_diff):
+        self.dff += dff_diff
+        # for i, j in it.chain(it.product(range(1)))
+    
+    def init_sim(self):
+        self.set_exit_cells()
+        self.init_wall()
+        self.init_sff()
+        self.init_peds(10)
+        self.init_dff()
+    
+    def seq_updata_cells(self, kappaS, kappaD, shuffle, reverse):
+        # 创建一个临时ped
+        tmp_peds = np.empty_like(self.ped)
+        # 拷贝赋值
+        np.copyto(tmp_peds, self.ped)
+        dff_diff = np.zeros(tmp_peds.shape)
+        grid = list(it.product(range(1, self.__dim_x - 1), range(1, self.__dim_y - 1))) + list(self.__exci_cells)   # 所有的可行进元胞（内部元胞+出口元胞）
+        if shuffle:  # sequential random update
+            random.shuffle(grid)
+        elif reverse:  # reversed sequential update
+            grid.reverse()
+        # 迭代所有可行进元胞
+        for cell in grid:
+            # 如果该位置没有行人 则跳出循环
+            if self.ped[cell] == 0:continue
+            # 以下逻辑建立在当前位置有行人的前提下
+            # 如果当前位置为出口 则行人下一秒会走出整个空间
+            if cell in self.__exci_cells:
+                # 因此需要将ped矩阵该位置赋值为0
+                tmp_peds[cell] = 0
+                dff_diff[cell] = 1
+                continue
+            # 如果当前位置不是出口 则需要计算移动概率
+            prob = 0
+            probs = {}
+            neighbors = self.get_neighbors(cell)
+            for neighbor in neighbors:
+                # 计算朝某一个邻居的行进概率
+                probability = np.exp(kappaS * (self.__sff[cell] - self.__sff[neighbor])) * \
+                          np.exp(kappaD * (self.dff[neighbor] - self.dff[cell])) * \
+                          (1 - tmp_peds[neighbor])
+                prob += probability
+                probs[neighbor] = probability
+            # 如果概率总和为0  则无法移动 跳出循环
+            if prob == 0:continue
+            
+            r = np.random.rand * prob
+            for neighbor in neighbors:
+                r -= probs[neighbor]
+                # 如果概率值小于0 则移动到元胞
+                if r <= 0 :
+                    tmp_peds[neighbor] = 1  # 将ped中该邻居元胞的值设置为1
+                    tmp_peds[cell] = 0  # 将ped中该元胞的值设置为0
+                    dff_diff[cell] += 1
+                    break
+        return tmp_peds, dff_diff
+    
+    def sim(self, steps:int):
+        for t in steps:
+            print(f"Floor {self.__id} Sim, t:{t}")
+            
         
 
     def __eq__(self, target):

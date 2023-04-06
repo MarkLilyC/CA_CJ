@@ -12,11 +12,15 @@ class Ped(object):
     @property
     def get_id(self): return self.__id
     def set_id(self, new_id): self.__id == new_id
+    
     @property
     def get_loc(self): return self.__location
     def set_loc(self, new_loc): 
         assert hasattr(new_loc, '__iter__')
         self.__location = new_loc
+    
+    def __str__(self) -> str:
+        return f"Ped:{self.__id}, {self.get_loc}"
     
 
 
