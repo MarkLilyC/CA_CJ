@@ -5,7 +5,7 @@ from utilies import cstr
 # 基本元胞类
 class Cell(object):
 
-    def __init__(self, x:int, y:int, sff:float = None, dff:float = None, ped:Ped = None) -> None:
+    def __init__(self, x:int, y:int, sff:float = 0, dff:float = 0, ped:Ped = None) -> None:
         self.__x = x
         self.__y = y
         self.__sff = sff    # 静态场不提供额外的修改方法
@@ -19,8 +19,32 @@ class Cell(object):
     def get_y(self): return self.__y
 
     def get_loc(self): return (self.__x, self.__y)
+    
+    def get_sff(self) :return self.__sff
+    
+    def set_sff(self, sff): self.__sff = sff 
+    
+    def get_dff(self) :return self.__dff
+    
+    def set_dff(self, dff): self.__dff = dff
 
     def get_classname(self):return self.__classname
+    
+    def neighbor_loc(self):
+        '''
+        reture [上 下 左 右]
+        '''
+        res = []
+        x, y = self.__x, self.__y
+        # 上侧元胞
+        if x - 1 > 0: res.append([x - 1, y])
+        # 下侧元胞
+        res.append([x + 1, y])
+        # 左侧元胞
+        if y - 1 > 0: res.append([x, y - 1])
+        # 右侧元胞
+        res.append([x, y + 1])
+        return res
 
     def __eq__(self, target: object) -> bool:
         return self.loc() == target.loc()
@@ -30,7 +54,7 @@ class Cell(object):
     
 # 墙体类
 class Wall(Cell):
-    def __init__(self, x:int, y:int, sff:float=None, dff:float=None) -> None:
+    def __init__(self, x:int, y:int, sff:float=0, dff:float=0) -> None:
         super().__init__(x, y, sff, dff)
         self.__x = x
         self.__y = y
@@ -40,15 +64,23 @@ class Wall(Cell):
     
     def get_classname(self):return self.__classname
     
+    def get_sff(self) :return self.__sff
+    
+    def set_sff(self, sff): self.__sff = sff 
+
+    def get_dff(self) :return self.__dff
+    
+    def set_dff(self, dff): self.__dff = dff
+     
     def __str__(self) -> str:
         return f"Wall:{(self.__x, self.__y)}, sff={self.__sff}, dff:{self.__dff}"
 
 class Exit(Cell):
-    def __init__(self, x:int, y:int, sff:float = None, dff:float = None, ped:Ped = None) -> None:
+    def __init__(self, x:int, y:int, sff:float = 0, dff:float = 0, ped:Ped = None) -> None:
         super().__init__(x, y, sff, dff, ped)
         self.__x = x
         self.__y = y
-        self.__sff = sff
+        self.__sff = 0
         self.__dff = dff
         self.__classname = "Exit"
         self.__ped = ped
@@ -57,8 +89,17 @@ class Exit(Cell):
     
     def get_ped(self): return self.__ped
     
+    # 当前元胞是否被占据 如果当前元胞的ped对象为none则false 非none则true
+    def occupied(self): return False if self.__ped is None else True
+    
+    def get_sff(self) :return 0
+    
     # 修改动态场的值
     def set_dff(self, value:float): self.__dff = value
+    
+    def get_dff(self) :return self.__dff
+    
+    def set_dff(self, dff): self.__dff = dff
     
     def init_ped(self, ped:Ped):
         # 初始化传入的ped必须是非none
@@ -98,7 +139,7 @@ class Exit(Cell):
         
 
 class Free(Cell):
-    def __init__(self, x, y, sff=None, dff=None, ped = None) -> None:
+    def __init__(self, x, y, sff=0, dff=0, ped = None) -> None:
         super().__init__(x, y, sff, dff)
         self.__x = x
         self.__y = y
@@ -107,10 +148,21 @@ class Free(Cell):
         self.__classname = "Free"
         self.__ped = ped
     
+    def get_sff(self) :return self.__sff
+    
+    def set_sff(self, sff): self.__sff = sff 
+
+    def get_dff(self) :return self.__dff
+    
+    def set_dff(self, dff): self.__dff = dff
+    
     def get_classname(self):return self.__classname
     
     # ped方法
     def get_ped(self):return self.__ped
+    
+    # 当前元胞是否被占据 如果当前元胞的ped对象为none则false 非none则true
+    def occupied(self): return False if self.__ped is None else True
     
     # 初始化一个ped
     def init_ped(self, ped_id:int = None):
