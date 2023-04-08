@@ -48,12 +48,23 @@ class Field(object):
 
     def y_len(self): return self.y_end - self.y_start
     
-    def check_loc(self, loc:tuple|list):
+    def check_loc(self, loc:tuple|list) -> bool:
         x, y = loc
-        return self.x_start <= x < self.x_end and self.y_start <= y < self.y_end
+        x_flag = self.x_start <= x < self.x_end
+        y_flag = self.y_start <= y < self.y_end
+        return x_flag and y_flag
 
     def at(self, loc:tuple|list):
+        '''返回在某一个坐标的元胞
+        Args:
+            loc (tuple | list): _description_
+
+        Returns:
+            _type_: _description_
+        '''
+
         return self.cells[loc[0]][loc[1]]
+
     
     def set(self, loc:tuple|list, cell:type = Cell|Wall|Free|Exit, sff:float = 0, dff:float = 0, ped:Ped = None):
         # 考虑越界
@@ -139,7 +150,7 @@ class Field(object):
         _, res = self.count()
         return res['Free'] + res["Exit"]
 
-    def get_walkable_cells(self) -> list[Free]:
+    def get_free_cells(self) -> list[Free]:
         free_cells = []
         for row in self.cells.values():
             for cell in row:
@@ -152,7 +163,7 @@ class Field(object):
         PED_CAPACITY = self.ped_capacity()
         assert n_peds <= PED_CAPACITY, f"Too many Peds ({n_peds}) to be initized in the field(capacity:{PED_CAPACITY})"
         # 获取场内的free cells
-        walkable_cells = self.get_walkable_cells()
+        walkable_cells = self.get_free_cells()
         # 随机打乱
         random.shuffle(walkable_cells)
         for i in range(n_peds):
@@ -172,20 +183,47 @@ class Field(object):
                 elif isinstance(cell, Free):self.frees.append(cell)
                 else:raise TypeError(f"Wrong type of cell in the filed {cell.__str__()}")
     
-    def find_neighbor(self, cell) -> list[Cell]:
-        if isinstance(cell, Cell):
-            pass
-        else:
-            cell = self.at(cell)
-        # 先找出当前元胞的邻居元胞该有的坐标
-        neighbors = cell.neighbor_loc()
-        neighbor_cells = []
-        # 检查上述元胞坐标是否都在当前field中
-        for nei in neighbors:
-            if self.check_loc(nei) and isinstance(self.at(nei), Free): 
-                neighbor_cells.append(self.at(nei))
-            else:pass
-        return neighbor_cells
+    def find_all_neighbor(self, cell:Cell) -> list[Cell]:
+        '''找到给定元胞的所有邻居元胞
+            * 内部先拿到cell的计算所有坐标意义上的邻居坐标值
+            * 然后对上述计算得到的邻居坐标值进行场内的判断 即该坐标是否位于当前场内
+            * 找到只是所有邻居元胞 并没有对元胞的类型进行限制
+
+        Args:
+            cell (_type_): _description_
+
+        Returns:
+            list[Cell]: _description_
+        '''
+        neighbors_loc = cell.neighbor_loc()
+        neighbor_cell = []
+        for loc in neighbors_loc:
+            # 要确定该位置是否存在于场内 这一步可能会出现该位置不存在于场内的正常情况 因此采用warn mode
+            if self.check_loc(loc=loc): neighbor_cell.append(self.at(loc=loc))
+        return neighbor_cell
+
+    def find_walkable_neighbor(self, cell:Cell) -> list[Cell]:
+        '''找到一个元胞周围的free exit两类元胞
+            * 不判断是否可以行进
+        Args:
+            cell (Cell): _description_
+
+        Returns:
+            list[Cell]: _description_
+        '''
+        neighbor_loc = cell.neighbor_loc()
+        neighbor_cell = []
+        for loc in neighbor_loc:
+            # 需要有两个条件必须满足 该位置位于当前场内 该位置的元胞是非Wall
+            # 首先确定是否存在于场内
+            if self.check_loc(loc=loc):
+                cell = self.at(loc=loc)
+                # 判断元胞的类型
+                if cell.cname == 'Free' or cell.cname == "Exit":  
+                    neighbor_cell.append(cell)
+                elif cell.cname == "Wall":pass
+                else: print(f"Got unexcpted Type of cell:{cell.__class__}")
+        return neighbor_cell
     
     def init_sff(self):
         # 先对field中的cells进行分类
@@ -205,9 +243,9 @@ class Field(object):
         while(cells_initized):
             # 取出当前的一级元胞
             cell = cells_initized.pop(0)
-            # 找到当前cell的可行进邻居元胞
-            neis = self.find_neighbor(cell)
-            # 迭代上述可行进元胞
+            # 找到当前cell的Free类邻居元胞
+            neis = self.find_walkable_neighbor(cell)
+            # 迭代上述Free类邻居元胞
             for nei in neis:
                 # 将当前一级元胞的所有直连free元胞的sff值赋值为当前元胞sff值 + 1
                 if cell.sff + 1 < nei.sff:
@@ -241,46 +279,48 @@ class Field(object):
     def seq_updata_cells(self, shuffle, reverse = None):
         
         # 把场内的非wall元胞打乱
-        walkable = self.exits + self.frees
-        if shuffle:random.shuffle(walkable)
-        # 找出所有存在ped的cell
-        ped_cells = self.get_ped_cells()
-        for cell in ped_cells:
-            pass
-        '''
-        for cell in walkable:
-            # 如果当前元胞没有行人 则跳出本次循环
-            if cell.free: continue
-            
-            # 如果当前为exit
+        
+        # 直接迭代ped
+        for ped in self.ped:
+            loc = ped.get_loc   # 获取当前ped的坐标
+            cell = self.at(loc=loc) # 根据loc取出该元胞
+            # 判断cell的类型
+            assert cell.cname != "Wall", f"Ped{ped.__str__()} unexpectedly move into a Wall cell"
+            # 如果cell为exit 则直接调用exit的ped_exit
             if isinstance(cell, Exit):
                 cell.ped_exit()
+                self.ped.remove(ped)
                 cell.dff_diff += 1
-                continue
-            
-            # 如果当前为free元胞 且有人存在
-            prob = 0
-            probs = {}
-            # loc = cell.loc
-            for neighbor in self.find_neighbor(cell=cell):
-                if neighbor.free:
-                    probability = math.exp(self.kappaS * (cell.sff - neighbor.sff))#  * math.exp(self.kappaD * (neighbor.dff - cell.dff))
-                    prob += probability
-                    probs[neighbor]  = probability
-            
-            if prob == 0:continue
-            
-            r = random.random() * prob
-            for nei, p in probs.items():
-                r -= p
-                if r <= 0:
-                    cell.ped_moveout(nei)
-                    cell.dff_diff += 1
-                    self.show_obst()
-                    # 将当前元胞弹出 这个step不再对其进行计算
-                    break
-            walkable.pop(0)
-        '''
+                self.show_obst()
+            # 如果cell为free 则进行详细的移动概率计算
+            elif isinstance(cell, Free):
+                prob, probs = 0, {}  # 定义当前ped移动的总概率和各个邻居元胞的移动概率
+                # 迭代当前ped所处元胞的所有的free exit邻居元胞
+                for neighbor in self.find_walkable_neighbor(cell=cell):
+                    # 判断元胞是否被占据
+                    if neighbor.free:
+                        # 计算概率
+                        probability = math.exp(self.kappaS * (cell.sff - neighbor.sff))#  * math.exp(self.kappaD * (neighbor.dff - cell.dff))
+                        prob += probability
+                        probs[neighbor]  = probability
+                    else: pass
+                # 如果概率为0 则该ped不进行移动
+                if prob == 0:continue
+                else:
+                    r = random.random() * prob  #   取一个随机数
+                    # 迭代所有可移动元胞的概率列表
+                    for nei, p in probs.items():
+                        r -= p
+                        if r <= 0:
+                            cell.ped_moveout(nei)
+                            cell.dff_diff += 1
+                            self.show_obst()
+                            # 只要ped进行了一次移动就应该弹出当前循环
+                            break
+            else: raise TypeError(f"{ped} located on a unexpexted type of Cell: {cell.__class__}")
+                    
+                            
+
             
                 # np.exp(kappaS * (sff[cell] - sff[neighbor])) * np.exp(kappaD  * (dff[neighbor] - dff[cell])) * (1 - tmp_peds[neighbor])
             
@@ -293,7 +333,7 @@ class Field(object):
                     cell.dff -= 1
                 elif random.random() < self.alpha:
                     cell.dff -= 1
-                    random.choice(self.find_neighbor(cell=cell)).dff += 1
+                    random.choice(self.find_walkable_neighbor(cell=cell)).dff += 1
 
         
     
@@ -312,4 +352,5 @@ f.init_exit()
 f.init_peds(3)
 f.init_sff()
 f.show_sff()
+f.show_obst()
 f.sim(1000, True)

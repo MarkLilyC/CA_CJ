@@ -12,23 +12,26 @@ class Cell(object):
         self.dff_diff = 0
     
     @property
-    def free(self): return self.ped == None
+    def free(self): return True if self.ped is None else False
     
     @property
     def loc(self): return (self.x, self.y)
         
-    def neighbor_loc(self):
-        '''
-        reture [上 下 左 右]
+    def neighbor_loc(self) -> list[list]:
+        '''计算当前元胞的所有邻居元胞坐标
+            * 内部没有详细的逻辑判断 
+            * 只是单纯返回了坐标意义上的邻居
+        Returns:
+            list: [上 下 左 右]元胞的坐标
         '''
         res = []
         x, y = self.x, self.y
         # 上侧元胞
-        if x - 1 > 0: res.append([x - 1, y])
+        if x - 1 >= 0: res.append([x - 1, y])
         # 下侧元胞
         res.append([x + 1, y])
         # 左侧元胞
-        if y - 1 > 0: res.append([x, y - 1])
+        if y - 1 >= 0: res.append([x, y - 1])
         # 右侧元胞
         res.append([x, y + 1])
         return res
@@ -74,6 +77,7 @@ class Wall(Cell):
         super().__init__(x, y, sff, dff, ped)
         self.cname = 'Wall'
     
+    @property
     def free(self): return False
 
 class Exit(Cell):
