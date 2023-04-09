@@ -40,4 +40,6 @@ def contain(original:list|tuple, target):
             if target == i:return True
             else: pass
         return False
-        
+
+def moke_movie(img_folder_path:str):
+    pass

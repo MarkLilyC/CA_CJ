@@ -1,37 +1,43 @@
 import utilies
-from floor import Floor
-from utilies import cstr
+from cell2 import *
+from field import Field
+
 
 class Building(object):
     def __init__(self, id):
         self.__id = id
         self.__floors = {}
+        self.__floors_index = []
     
     @property
     def get_id(self): return self.__id
     def set_id(self, new_id): self.__id = new_id
     
-    def get_floors_ids(self):return list(self.__floors.keys())
-
-    def get_floors(self):return self.__floors
-
-    def get_floor(self, floor_id): return self.__floors[floor_id]
-
-    def add_floor(self, new_floor:Floor):
-        floors = list(self.get_floors().values())
-        if utilies.contain(floors, new_floor):
-            print(cstr(f"{new_floor} already exists in the building", 2))
-            return False
-        else:
-            self.__floors[new_floor.get_id] = new_floor
-            return True
+    def get_floors_index(self): return self.__floors.keys()
     
-    def sim(self):
-        for i in self.__floors.values():
-            pass
-        
-    def __str__(self):
-        res = f'Building {self.get_id}, contains Floor: \n'
-        for id, floor in self.get_floors().items():
-            res += "    " + f"id: {id}, Floor: {floor.__str__()}"
-        return res
+    def add_floor(self, field:Field):
+        id = field.get_id()
+        # 不能有重复id的楼层
+        if utilies.contain(self.get_floors_index(), id):
+            print(f"Id:{id} already exists ")
+        else:
+            self.__floors[id] = field
+    
+    def order_floor(self):
+        indics = self.get_floors_index()
+        tmp = {}
+        for i in range(1, len(indics) + 1):
+            tmp[i] = self.__floors[i]
+        self.__floors = tmp
+
+x_range = [0, 12]
+y_range = [0, 12]
+
+b = Building(id=0)
+f1 = Field(x_range=x_range, y_range=y_range, id=1)
+f2 = Field(x_range=x_range, y_range=y_range, id=2)
+f3 = Field(x_range=x_range, y_range=y_range, id=3)
+b.add_floor(f1)
+b.add_floor(f2)
+b.add_floor(f3)
+b.order_floor()
